@@ -1,300 +1,370 @@
-🏥 Secure Patient Service Backend
+[# Smart E-Commerce Checkout Workflo.txt](https://github.com/user-attachments/files/26167239/Smart.E-Commerce.Checkout.Workflo.txt)
+# Smart E-Commerce Checkout Workflow (Node.js + MySQL + RabbitMQ)
 
-This project is a secure Spring Boot microservice that manages patient data with:
+## Project Overview
 
-🔐 Keycloak Authentication
+This project implements a **Smart E-Commerce Checkout Backend Workflow** using **Node.js, Express, MySQL, and RabbitMQ**.
+It simulates how a real-world e-commerce platform processes checkout operations through multiple backend services.
 
-👤 Role-Based Access Control (RBAC)
+The system demonstrates how different services communicate using both:
 
-🌐 HTTPS (TLS)
+* REST APIs (synchronous communication)
+* RabbitMQ messaging (asynchronous communication)
 
-🔒 AES Encryption for sensitive data
+The workflow ensures that when a payment is completed successfully, inventory is automatically updated without direct coupling between services.
 
-⚙️ Jenkins CI/CD pipeline
+---
 
-📦 GitHub integration
+## Objective of the Project
 
-The goal of this project is to demonstrate enterprise-level backend security implementation.
+The objective of this project is to design and implement a **service-based checkout workflow** that includes:
 
-📌 Project Features
+* Inventory management
+* Cart processing
+* Discount application
+* Payment handling
+* Event-driven inventory updates using RabbitMQ
 
-This system provides:
+This architecture reflects how scalable enterprise e-commerce platforms operate internally.
 
-Feature	Description
-Authentication	Managed using Keycloak
-Authorization	Role-based API access control
-HTTPS	Secure TLS communication
-AES Encryption	Protects patient data in database
-Jenkins CI/CD	Automatic project build pipeline
-GitHub	Version control integration
-🏗️ Technology Stack
-Technology	Purpose
-Spring Boot	Backend framework
-Keycloak	Authentication & authorization
-MySQL	Database
-AES	Data encryption
-HTTPS (TLS)	Secure communication
-Jenkins	CI/CD automation
-GitHub	Source control
-🔐 Security Architecture
+---
 
-The application includes three security layers:
+## Technology Stack
 
-1️⃣ Authentication
+| Technology | Purpose                |
+| ---------- | ---------------------- |
+| Node.js    | Backend runtime        |
+| Express.js | REST API framework     |
+| MySQL      | Data persistence       |
+| RabbitMQ   | Asynchronous messaging |
+| Postman    | API testing            |
 
-Handled using Keycloak
+---
 
-Users must log in before accessing APIs.
+## System Architecture
 
-2️⃣ Authorization (RBAC)
+The project is structured as multiple backend services communicating together:
 
-Two roles exist:
+Inventory Service
+Cart Service
+Payment Service
+Discount Service
+RabbitMQ Event Broker
 
-Role	Permission
-viewer	Can GET patient data
-editor	Can GET + POST patient data
+### Workflow Sequence
 
-Example:
+Inventory → Cart → Discount → Payment → RabbitMQ Event → Inventory Update
 
-viewer → allowed → GET /patients
-viewer → blocked → POST /patients
+This ensures loose coupling between services and improves scalability.
 
-editor → allowed → POST /patients
-3️⃣ Data Encryption
+---
 
-Sensitive fields encrypted before saving:
+## Database Design
 
-name
-disease
+The system uses a MySQL database named:
 
-Stored encrypted in database using AES algorithm
+ecommerce
 
-Returned decrypted in API responses.
+### Inventory Table
 
-Example stored value:
+Stores product information.
 
-vs6vI4D2M4J9WQ/wiwZJ/A==
-🌐 HTTPS Configuration
+Fields:
 
-The application runs securely using TLS:
+* id
+* product_name
+* quantity
+* price
+* sku
 
-https://localhost:8443
+Purpose:
 
-Steps implemented:
+Tracks available stock and updates automatically after successful payment.
 
-Generated keystore file
+---
 
-Configured Spring Boot SSL
+### Cart Table
 
-Enabled HTTPS port 8443
+Stores items selected by the user.
 
-This ensures secure communication between client and server.
+Fields:
 
-👤 Keycloak Setup
+* id
+* product_id
+* quantity
+* total_price
 
-Realm created:
+Purpose:
 
-healthcare
+Acts as temporary storage before checkout.
 
-Client created:
+---
 
-patient-api
+### Orders Table
 
-Users:
+Stores order summary information.
 
-testuser
-editoruser
+Fields:
 
-Roles:
+* order_id
+* total_amount
+* discount_amount
+* status
+* created_at
 
-viewer
-editor
+Purpose:
 
-Role mapping:
+Represents finalized transactions.
 
-testuser → viewer
-editoruser → editor
-🔑 Token Generation Example
+---
 
-Keycloak token endpoint:
+### Payments Table
 
-http://localhost:9090/realms/healthcare/protocol/openid-connect/token
+Stores payment processing results.
 
-POST request body:
+Fields:
 
-grant_type=password
-client_id=patient-api
-username=testuser
-password=1234
+* payment_id
+* order_id
+* amount
+* discount_applied
+* status
+* created_at
 
-Returned:
+Purpose:
 
-access_token
+Records payment success or failure.
 
-Used in API requests:
+---
 
-Authorization: Bearer <token>
-📡 API Endpoints
+## Services Implemented
 
-Base URL:
+### 1. Inventory Service
 
-https://localhost:8443/patients
-GET all patients
-GET /patients
+Responsibilities:
 
-Role required:
+* Add new product
+* View all products
+* View individual product
+* Update stock automatically after purchase
 
-viewer OR editor
-GET patient by ID
-GET /patients/{id}
+Example APIs:
 
-Role required:
+POST /inventory
+GET /inventory
+GET /inventory/:id
+PUT /inventory/:id
 
-viewer OR editor
-CREATE patient
-POST /patients
+---
 
-Example request:
+### 2. Cart Service
 
-{
-  "name": "Noel",
-  "disease": "Fever"
-}
+Responsibilities:
 
-Role required:
+* Add product to cart
+* Calculate total price automatically
+* View cart contents
 
-editor
-🔒 AES Encryption Implementation
+Example APIs:
 
-Before saving:
+POST /cart
+GET /cart
 
-name → encrypted
-disease → encrypted
+---
 
-Before returning response:
+### 3. Discount Service
 
-name → decrypted
-disease → decrypted
+This service applies promotional discounts before payment.
 
-Implemented using:
+Supported codes:
 
-AESUtil.java
+NEWYEAR → 10% discount
+WELCOME → 5% discount
 
-Encryption flow:
+If no valid discount code is provided, payment proceeds normally.
 
-Request → Encrypt → Save DB
-Response → Decrypt → Return JSON
-⚙️ Jenkins CI/CD Pipeline
+---
 
-Jenkins automates project build from GitHub.
+### 4. Payment Service
 
-Pipeline steps:
+Responsibilities:
 
-Pull project from repository
+* Accept cart ID
+* Apply discount (if available)
+* Store payment record
+* Publish event to RabbitMQ queue
 
-Execute Maven build
+Example API:
 
-Generate executable JAR
+POST /payment/process
 
-Verify build success
+This triggers inventory update asynchronously.
 
-Command used:
+---
 
-mvn clean install
+## RabbitMQ Integration
 
-Build result:
+RabbitMQ enables communication between services without direct dependency.
 
-BUILD SUCCESS
-📦 GitHub Repository
+### Publisher
 
-Project hosted at:
+Payment Service publishes:
 
-https://github.com/Noelsiby/patient-service-backend
+payment_processed event
 
-Contains:
+Payload includes:
 
-src/
-pom.xml
-application.properties
-keystore.p12
-AESUtil.java
-SecurityConfig.java
-PatientController.java
-🗄️ Database Security
+cart_id
+payment_id
+amount
 
-Stored values are encrypted.
+---
 
-Example:
+### Consumer
 
-Field	Stored Value
-name	encrypted
-disease	encrypted
+Inventory Service listens for:
 
-Returned values:
+payment_processed event
 
-decrypted automatically
-▶️ How To Run Project
-Step 1
+After receiving event:
 
-Start Keycloak:
+Inventory quantity is automatically reduced based on cart contents.
 
-http://localhost:9090
-Step 2
+This demonstrates event-driven architecture.
 
-Run Spring Boot:
+---
 
-mvn spring-boot:run
-Step 3
+## End-to-End Workflow Explanation
 
-Access API securely:
+Step 1:
 
-https://localhost:8443/patients
-Step 4
+Product is added into inventory database.
 
-Generate token using Postman
+Step 2:
 
-Use:
+User adds item to cart.
 
-access_token
+Step 3:
 
-for authorization header
+Cart calculates total price automatically.
 
-🧪 Testing Using Postman
+Step 4:
 
-Add header:
+User applies optional discount code.
 
-Authorization: Bearer <access_token>
+Step 5:
 
-Test:
+Payment service processes transaction.
 
-GET /patients
-POST /patients
+Step 6:
 
-Verify role restrictions.
+Payment service publishes event to RabbitMQ.
 
-📊 Project Workflow
-Client
-   ↓
-Keycloak Authentication
-   ↓
-Role Validation (RBAC)
-   ↓
-Spring Boot API
-   ↓
-AES Encryption
-   ↓
-Database Storage
-🎯 Learning Outcomes
+Step 7:
+
+Inventory service consumes event.
+
+Step 8:
+
+Inventory quantity updates automatically.
+
+This confirms asynchronous communication between services.
+
+---
+
+## API Testing Using Postman
+
+Example testing order:
+
+1. Add inventory item
+2. Add product to cart
+3. View cart details
+4. Process payment with discount
+5. Verify inventory reduction
+
+This demonstrates the full checkout lifecycle.
+
+---
+
+## How to Run the Project
+
+### Step 1: Clone Repository
+
+git clone <repository-link>
+
+cd Smart-E-commerce-backend
+
+---
+
+### Step 2: Install Dependencies
+
+npm install
+
+---
+
+### Step 3: Configure Environment Variables
+
+Create .env file:
+
+DB_HOST=localhost
+DB_USER=root
+DB_PASSWORD=yourpassword
+DB_NAME=ecommerce
+RABBITMQ_URL=amqp://localhost
+
+---
+
+### Step 4: Start Required Services
+
+Start:
+
+MySQL server
+RabbitMQ server
+
+---
+
+### Step 5: Run Application
+
+node server.js
+
+Server runs on:
+
+http://localhost:3000
+
+---
+
+## Expected Output
+
+After successful payment:
+
+* Discount applied correctly
+* Payment stored in database
+* RabbitMQ event triggered
+* Inventory automatically reduced
+* Updated inventory visible via API
+
+---
+
+## Learning Outcomes
 
 This project demonstrates:
 
-✔ Secure authentication using Keycloak
-✔ Role-based authorization
-✔ HTTPS communication
-✔ AES encryption for sensitive data
-✔ CI/CD automation using Jenkins
-✔ GitHub integration
+REST API design
+Database integration with MySQL
+Microservice-style architecture
+Event-driven communication using RabbitMQ
+Backend workflow automation
+Real-world checkout system simulation
 
+---
 
-Secure Patient Service Backend Project
-Spring Boot + Keycloak + AES + HTTPS + Jenkins CI/CD 🚀
+## Conclusion
+
+This project successfully simulates a production-style e-commerce checkout workflow using asynchronous service communication.
+
+RabbitMQ ensures that inventory updates occur independently after payment confirmation, improving scalability and maintainability of the system.
+
+The architecture reflects modern backend engineering practices used in enterprise commerce platforms.
+
+---
+
